@@ -15,6 +15,11 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+app.use((a,b,c) => {
+    console.log(`Request received: ${a.method} ${a.originalUrl}`);
+    c();
+});
+
 // Serve static files from the downloads directory
 app.use('/downloads', express.static('downloads'));
 

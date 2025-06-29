@@ -3,6 +3,8 @@ const router = express.Router();
 const ytdl = require('@distube/ytdl-core');
 const fs = require('fs');
 const path = require('path');
+const {addSongToDatabase, getSongFromDatabase} = require("../database/databaseManager");
+const {response} = require("express");
 
 // GET /api/song/:id/url
 router.get('/:id/url', async (req, res) => {
@@ -15,6 +17,17 @@ router.get('/:id/url', async (req, res) => {
     if (!isValidId) {
       return res.status(404).json({ code: 'NOT_FOUND', message: 'Song not found', details: {} });
     }
+
+    let data = await getSongFromDatabase(id);
+    console.log('Fetched song data:', data);
+    if (data) {
+      return res.status(200).json({
+        data: { url: data.url },
+        message: 'MP3 URL fetched successfully'
+      });
+    }
+
+
 
     const downloadsDir = path.join(__dirname, '../downloads');
     const filePath = path.join(downloadsDir, `${id}.mp3`);
@@ -36,6 +49,7 @@ router.get('/:id/url', async (req, res) => {
 
     writeStream.on('finish', () => {
       console.log('File url:', fullUrl);
+      addSongToDatabase(id, fullUrl);
       return res.status(200).json({
         data: { url: fullUrl },
         message: 'MP3 URL fetched successfully'

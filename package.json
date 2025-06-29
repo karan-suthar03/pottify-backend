@@ -21,6 +21,7 @@
   "dependencies": {
     "@distube/ytdl-core": "^4.16.12",
     "@supabase/supabase-js": "^2.50.0",
+    "@hydralerne/youtube-api": "^1.1.5",
     "bcryptjs": "^3.0.2",
     "cors": "^2.8.5",
     "dotenv": "^16.5.0",
