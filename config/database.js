@@ -31,7 +31,7 @@ if (supabaseUrl && supabaseUrl !== 'your_supabase_project_url_here' &&
     
     console.log('✅ Supabase client initialized successfully');
   } catch (error) {
-    console.error('❌ Failed to initialize Supabase client:', error.message);Ś
+    console.error('❌ Failed to initialize Supabase client:', error.message);
   }
 }
 
