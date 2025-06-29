@@ -4,7 +4,7 @@ const ytdl = require('@distube/ytdl-core');
 const fs = require('fs');
 const path = require('path');
 const {addSongToDatabase, getSongFromDatabase} = require("../database/databaseManager");
-const {response} = require("express");
+const {uploadFileToSupabase} = require("../services/supabaseStorageService");
 
 // GET /api/song/:id/url
 router.get('/:id/url', async (req, res) => {
@@ -31,29 +31,36 @@ router.get('/:id/url', async (req, res) => {
 
     const downloadsDir = path.join(__dirname, '../downloads');
     const filePath = path.join(downloadsDir, `${id}.mp3`);
-    const fileUrl = `/downloads/${id}.mp3`;
-    const fullUrl = req.protocol + 's://' + req.get('host') + fileUrl;
-
-    // If file already exists, return its URL
-    if (fs.existsSync(filePath)) {
-      return res.status(200).json({
-        data: { url: fullUrl },
-        message: 'MP3 URL fetched successfully'
-      });
-    }
 
     // Download from YouTube
     const stream = ytdl(id, { filter: 'audioonly', quality: 'highestaudio' });
     const writeStream = fs.createWriteStream(filePath);
     stream.pipe(writeStream);
 
-    writeStream.on('finish', () => {
-      console.log('File url:', fullUrl);
-      addSongToDatabase(id, fullUrl);
-      return res.status(200).json({
-        data: { url: fullUrl },
-        message: 'MP3 URL fetched successfully'
+    writeStream.on('finish', async () => {
+      let url = await uploadFileToSupabase(filePath);
+      if (!url) {
+          console.error('Failed to upload file to Supabase');
+          return res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Failed to upload audio file', details: {} });
+      }
+      addSongToDatabase(id,url).then(() => {
+          console.log('Song added to database successfully')
+      }).catch((err) => {
+          console.error('Error adding song to database:', err);
+      })
+      // Clean up the downloaded file
+      fs.unlink(filePath, (err) => {
+        if (err) {
+          console.error('Error deleting file:', err);
+        } else {
+          console.log('File deleted successfully');
+        }
       });
+      return res.status(200).json({
+          data: { url: url },
+          message: 'MP3 URL fetched successfully'
+      })
+
     });
     writeStream.on('error', (err) => {
       console.error('File write error:', err);

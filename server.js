@@ -7,8 +7,21 @@ const authRoutes = require('./routes/auth');
 const searchRoutes = require('./routes/search');
 const songRoutes = require('./routes/song');
 
+// Import database setup
+const { setupBucket } = require('./config/database');
+
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught Exception:', err);
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  process.exit(1);
+});
 
 // Middleware
 app.use(cors());
@@ -84,9 +97,39 @@ app.use((req, res) => {
   });
 });
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, async () => {
   console.log(`🚀 Server is running on http://localhost:${PORT}`);
   console.log(`📚 API Health check: http://localhost:${PORT}/api/health`);
+  
+  // Setup bucket after server starts
+  try {
+    await setupBucket();
+    console.log('✅ Server setup completed successfully');
+  } catch (error) {
+    console.error('❌ Error during server setup:', error.message);
+    // Don't exit the process, just log the error
+  }
+});
+
+// Handle server errors
+server.on('error', (error) => {
+  console.error('❌ Server error:', error);
+  process.exit(1);
+});
+
+// Handle graceful shutdown
+process.on('SIGTERM', () => {
+  console.log('SIGTERM received, shutting down gracefully');
+  server.close(() => {
+    console.log('Process terminated');
+  });
+});
+
+process.on('SIGINT', () => {
+  console.log('SIGINT received, shutting down gracefully');
+  server.close(() => {
+    console.log('Process terminated');
+  });
 });
 
 module.exports = app;

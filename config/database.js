@@ -35,4 +35,31 @@ if (supabaseUrl && supabaseUrl !== 'your_supabase_project_url_here' &&
   }
 }
 
-module.exports = { supabase, supabaseAdmin };
+// setup bucket
+
+let bucketName = process.env.SUPABASE_BUCKET_NAME || 'music-files';
+
+async function setupBucket() {
+  if (supabaseAdmin) {
+    const {data: buckets, error: listError} = await supabaseAdmin.storage.listBuckets();
+    if (listError){
+      console.error('Error listing buckets:', listError.message);
+    }else{
+      if (!buckets.some(bucket => bucket.name === bucketName)) {
+        const { data, error } = await supabaseAdmin.storage.createBucket(bucketName, { public: true });
+        if (error) {
+          console.error('Error creating bucket:', error.message);
+        } else {
+          console.log(`Bucket "${bucketName}" created successfully.`);
+        }
+      } else {
+        console.log(`Bucket "${bucketName}" already exists.`);
+      }
+    }
+  } else {
+    console.warn('⚠️  SUPABASE_SERVICE_ROLE_KEY not configured. Bucket setup will be skipped.');
+    console.log('📝 Please set up your Supabase service role key in the .env file for bucket operations.');
+  }
+}
+
+module.exports = { supabase, supabaseAdmin, bucketName, setupBucket };
